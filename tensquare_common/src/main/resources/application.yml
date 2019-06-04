@@ -1,0 +1,4 @@
+jwt:
+  config:
+    key: jianghu
+    ttl: 360000

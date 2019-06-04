@@ -4,9 +4,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import io.jsonwebtoken.Claims;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +23,10 @@ import com.tensquare.user.service.UserService;
 import entity.PageResult;
 import entity.Result;
 import entity.StatusCode;
+import util.IdWorker;
+import util.JwtUtil;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * 控制器层
@@ -36,6 +43,12 @@ public class UserController {
 
     @Autowired
     private RedisTemplate redisTemplate;
+
+    @Autowired
+    private HttpServletRequest request;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     /**
      * 查询全部数据
@@ -114,6 +127,10 @@ public class UserController {
      */
     @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
     public Result delete(@PathVariable String id) {
+        Claims claims = (Claims) request.getAttribute("admin_claims");
+        if (claims.isEmpty()) {
+            return new Result(false, StatusCode.ERROR, "无权删除");
+        }
         userService.deleteById(id);
         return new Result(true, StatusCode.OK, "删除成功");
     }
@@ -138,17 +155,39 @@ public class UserController {
     public Result register(@RequestBody User user, @PathVariable String
             code) {
         String num = (String) redisTemplate.opsForValue().get(user.getMobile());
-        if (code.isEmpty()) return new Result(true, StatusCode.ERROR, "请先发送验证码");
-        if (!code.equals(num)) return new Result(true, StatusCode.ERROR, "验证码错误");
-        user.setFollowcount(0);//关注数
-        user.setFanscount(0);//粉丝数
-        user.setOnline(0L);//在线时长
-        user.setRegdate(new Date());//注册日期
-        user.setUpdatedate(new Date());//更新日期
-        user.setLastdate(new Date());//最后登陆日期
+        if (code.isEmpty()) {
+            return new Result(true, StatusCode.ERROR, "请先发送验证码");
+        }
+        if (!code.equals(num)) {
+            return new Result(true, StatusCode.ERROR, "验证码错误");
+        }
+        //关注数
+        user.setFollowcount(0);
+        //粉丝数
+        user.setFanscount(0);
+        //在线时长
+        user.setOnline(0L);
+        //注册日期
+        user.setRegdate(new Date());
+        //更新日期
+        user.setUpdatedate(new Date());
+        //最后登陆日期
+        user.setLastdate(new Date());
         userService.add(user);
         return new Result(true, StatusCode.OK, "注册成功");
     }
 
+    @RequestMapping("/login")
+    public Result login(@RequestBody User user) {
+        User user1 = userService.login(user);
+
+        if (user1 == null) {
+            return new Result(true, StatusCode.ERROR, "账号或密码错误");
+        }
+
+        String token = jwtUtil.createJWT(user1.getId(), user1.getNickname(), "user");
+
+        return new Result(true, StatusCode.OK, "登录成功", token);
+    }
 }
 

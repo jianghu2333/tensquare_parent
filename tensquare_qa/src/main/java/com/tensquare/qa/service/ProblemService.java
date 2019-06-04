@@ -152,7 +152,7 @@ public class ProblemService {
 
             @Override
             public Predicate toPredicate(Root<Problem> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
-                List<Predicate> predicateList = new ArrayList<Predicate>();
+                List<Predicate> predicateList = new ArrayList<>();
                 // ID
                 if (searchMap.get("id") != null && !"".equals(searchMap.get("id"))) {
                     predicateList.add(cb.like(root.get("id").as(String.class), "%" + (String) searchMap.get("id") + "%"));

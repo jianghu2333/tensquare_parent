@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import util.IdWorker;
@@ -44,6 +45,8 @@ public class UserService {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+    @Autowired
+    BCryptPasswordEncoder encoder;
 
     /**
      * 查询全部列表
@@ -97,6 +100,8 @@ public class UserService {
      * @param user
      */
     public void add(User user) {
+        user.setPassword(encoder.encode(user.getPassword()));
+        user.setId(idWorker.nextId() + "");
         user.setId(idWorker.nextId() + "");
         userDao.save(user);
     }
@@ -176,16 +181,35 @@ public class UserService {
 
     }
 
+    /**
+     * 发短信
+     *
+     * @param mobile
+     */
     public void sendSms(String mobile) {
         //验证码
         String numeric = RandomStringUtils.randomNumeric(5);
         //存入Redis  时间60秒
         redisTemplate.opsForValue().set(mobile, numeric, 60, TimeUnit.SECONDS);
-        HashMap<String, String> hashMap = new HashMap<>();
+        HashMap<String, String> hashMap = new HashMap<>(16);
         hashMap.put("mobile", mobile);
         hashMap.put("sms", numeric);
         //放入rabbitmq
-        rabbitTemplate.convertAndSend("sms", hashMap);
+        rabbitTemplate.convertAndSend("sms", "sms", hashMap);
         System.out.println("验证码" + numeric);
+    }
+
+    /**
+     * 发短信
+     *
+     * @param user
+     */
+    public User login(User user) {
+
+        User user1 = userDao.findByMobile(user.getMobile());
+        if (user1 != null && encoder.matches(user1.getPassword(), user.getPassword())) {
+            return user1;
+        }
+        return null;
     }
 }
