@@ -2,3 +2,9 @@ jwt:
   config:
     key: jianghu
     ttl: 360000
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:6868/
+  instance:
+    prefer-ip-address: true

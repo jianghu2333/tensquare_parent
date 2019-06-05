@@ -7,9 +7,15 @@ spring:
     driverClassName: com.mysql.jdbc.Driver
     url: jdbc:mysql://192.168.11.128/tensquare_gathering?characterEncoding=UTF8
     username: root
-    password: root
+    password: 123456
   jpa:
     database: MySQL
     show-sql: true
   redis:
     host: 192.168.11.128
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:6868/eureka/
+  instance:
+    prefer-ip-address: true
